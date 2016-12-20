@@ -11,7 +11,7 @@ try:
         arg_bytes_hex = None
         byte_hex = struct.unpack('<B', byte)[0]
 
-        op = instructions['0x{0:02x}'.format(byte_hex)]
+        op = instructions[byte_hex]
 
         if(op['length'] == 2):
             arg_bytes = rom.read(1)
@@ -25,7 +25,7 @@ try:
         elif(op['length'] == 4):
             arg_bytes = rom.read(3)
             arg_bytes_hex = struct.unpack('<BBB', arg_bytes)
-            print arg_bytes_hex
+
             arg_bytes_hex = int(''.join(str(i) for i in arg_bytes_hex))
             arg = '${0:06x}'.format(arg_bytes_hex)
 
