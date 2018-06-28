@@ -1,17 +1,72 @@
 import struct
-from instructions import instructions
+import misc.instructions as opcodes
+import misc.helper as Helper
 
 rom = open('yoshi.sfc', 'rb')
 output = open('data', 'wa')
 
-try:
-    address = 0x000000
-    byte = rom.read(1)
-    while byte != '':
-        arg_bytes_hex = None
-        byte_hex = struct.unpack('<B', byte)[0]
 
-        op = instructions[byte_hex]
+address = 0x000000
+
+read_size = 1
+
+#current bytes
+byte = -1
+
+def read_line(rom_pc):
+	global address
+	line = '${0:06x} '.format(address)
+	read_size = 1
+	
+	byte = Helper.read_bytes(rom_pc, read_size)
+	op = Helper.get_opcode(int(byte, 10))
+	
+	if op['length'] == 1:
+		return line + op['opcode']
+	
+	#get data bytes
+	data = Helper.read_bytes(rom_pc, op['length'] - 1)
+	#print data
+	
+	line += '%s %s%s' % (op['opcode'], op['prefix'], data)
+	
+	address += op['length']
+	return line
+
+print read_line(rom)
+print read_line(rom)
+print read_line(rom)
+print read_line(rom)
+print read_line(rom)
+print read_line(rom)
+print read_line(rom)
+print read_line(rom)
+print read_line(rom)
+
+print read_line(rom)
+print read_line(rom)
+print read_line(rom)
+print read_line(rom)
+print read_line(rom)
+print read_line(rom)
+print read_line(rom)
+
+
+
+"""
+	while byte != '':
+		arg_bytes_hex = None
+		byte_hex = struct.unpack('<B', byte)[0]
+		
+		# get opcode and length
+		op = Helper.get_opcode(byte_hex)
+		bytecount = op['length']
+		# get tuple containing 0-3
+		if bytecount > 1:
+			val = get_bytes(rom, bytecount)
+			
+		else:
+			full_line = (op['opcode'], null, null, null)
 
         if(op['length'] == 2):
             arg_bytes = rom.read(1)
@@ -40,3 +95,4 @@ try:
         address += op['length']
 finally:
     rom.close()
+"""
