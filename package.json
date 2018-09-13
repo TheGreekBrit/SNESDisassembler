@@ -1,34 +1,16 @@
 {
-  "name": "nodejs-getting-started",
-  "version": "1.0.0",
-  "description": "End to end sample for running Node.js applications on Google Cloud Platform",
-  "repository": "https://github.com/GoogleCloudPlatform/nodejs-getting-started",
-  "private": true,
+  "name": "snes-disassembler",
+  "version": "0.0.1",
+  "description": "disassembles snes games",
+  "repository": "https://github.com/TheGreekBrit/YoshiDisassembler",
+  "private": false,
   "scripts": {
     "start": "node app.js",
     "e2e": "repo-tools test deploy",
     "test": "repo-tools test app",
     "cover": "nyc --cache npm test; nyc report --reporter=html"
   },
-  "author": "Google Inc.",
-  "contributors": [
-    {
-      "name": "Jon Wayne Parrott",
-      "email": "jonwayne@google.com"
-    },
-    {
-      "name": "Jonathan Simon",
-      "email": "jbsimon@google.com"
-    },
-    {
-      "name": "Jason Dobry",
-      "email": "jdobry@google.com"
-    },
-    {
-      "name": "Ace Nassri",
-      "email": "anassri@google.com"
-    }
-  ],
+  "author": "Alexander Houston",
   "cloud-repo-tools": {
     "requiresKeyFile": true,
     "requiresProjectId": true,
