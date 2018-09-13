@@ -5,7 +5,7 @@ const bodyParser = require('body-parser'),
       fs = require('fs'),
       multer = require('multer');
 
-const parseChunk = require('./YoshiDisassembler/dis.js').parse;
+const parseChunk = require('./dis_tools/dis.js').parse;
 
 const upload = multer({destination: 'uploads/', fileFilter: fileFilter});
 const app = express();
