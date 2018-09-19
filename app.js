@@ -15,12 +15,14 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({extended: true}));
 app.use(bodyParser.raw({type: 'application/octet-stream', limit: '16mb'}));
 
+// Index page
 app.get('/', (req, res) => {
-  //res.status(200).send('Hello, world!');
-  res.sendFile(__dirname + '/index.html');
+	res.sendFile(__dirname + '/index.html');
 });
 
-app.post('/', upload.single('romfile'), (req, res, next) => {
+// Handle file upload
+// spins off rom parsing functions
+app.post('/', upload.single('romfile'), (req, res) => {
         if (!req.file) {
                 console.error('No file received');
                 console.log('req:',Object.keys(req));
@@ -33,10 +35,10 @@ app.post('/', upload.single('romfile'), (req, res, next) => {
                 if (bytes > romfile.size)
                         res.status(400).send(`<h1><b>ERROR: Byte count exceeds ROM size<br />Bytes given: ${bytes}<br />ROM Size: ${romfile.size} bytes</b></h1>`);
 
-                else if (bytes < 0)
+                if (bytes < 0)
                         res.status(400).send('<h1><b>ERROR: Byte count may not be negative</b></h1>');
 
-                else if (isNaN(parseInt(bytes)))
+                if (isNaN(parseInt(bytes)))
                         res.status(400).send('<h1><b>ERROR: Byte count must be a positivenumber</b></h1>');
 
 		/*
@@ -44,7 +46,6 @@ app.post('/', upload.single('romfile'), (req, res, next) => {
 		 * @romdata - buffer of ROM bytes
 		 * @romfile - file metadata
 		 */
-
 
 		romParse(romdata, romfile)
 			.then((data, extra) => {
@@ -58,36 +59,31 @@ app.post('/', upload.single('romfile'), (req, res, next) => {
 
 		console.error('should not get here');
 
-                let parsedBytes = parseChunk(romdata, bytes);
-
-                console.log('file:',romfile);
-                //console.log('bytes:',bytes);
-                //console.log(parsedBytes.join(' '));
-				
-				// TODO
-				// refactor away the ugly
-                //res.status(200).send(`${romfile.originalname}<br />Size: ${romfile.size} bytes<br /><br /><b>First ${bytes} bytes:</b><br /><br />${parsedBytes.join(' ')}`);
         }
 });
 
 if (module === require.main) {
-  // [START server]
-  // Start the server
-  const server = app.listen(process.env.PORT || 8080, () => {
-    const port = server.address().port;
-    console.log(`App listening on port ${port}`);
-  });
-  // [END server]
+	// [START server]
+	// Start the server
+	const server = app.listen(process.env.PORT || 8080, () => {
+		const port = server.address().port;
+		console.log(`App listening on port ${port}`);
+	});
+	// [END server]
 }
 
-// Limit file extensions to the following:
+// Limits file extensions to the following:
 // .smc - headered SNES
 // .sfc - unheadered SNES
 function fileFilter(arg, file, cb) {
-        if(file.originalname.endsWith('.smc') || file.originalname.endsWith('.sfc'))
-                cb(null,true);
-        else
-                cb(null,false);
+	switch(file.originalname.slice(-3)) {
+		case 'smc':
+		case 'sfc':
+			cb(null, true);
+			break;
+		default:
+			cb(null, false);
+	}
 }
 
 module.exports = app;

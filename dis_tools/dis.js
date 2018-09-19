@@ -1,4 +1,4 @@
-DEBUG=true;
+const DEBUG=true;
 
 const fs = require('fs'),
       Promise = require('promise'),
@@ -8,18 +8,6 @@ console.log(instructions['0xef']);
 
 if (DEBUG)
         console.log('DEBUG ENABLED');
-
-//let readStream = fs.createReadStream('./yoshi.sfc');
-
-//let data = []
-
-//readStream.on('data', chunk => {
-//      chunk.forEach(i => {
-//              data.push(i);
-//      });
-//});
-
-//readStream.on('end', tmp => parse(data));
 
 function parse(rom, metadata, numBytes) {
 	return new Promise((fulfill, reject) => {
@@ -52,7 +40,7 @@ function parse(rom, metadata, numBytes) {
 			})
 			.catch(err => { reject({err: 2, msg: 'ERROR PARSING LINE', data: err}); });
 
-
+		// Return parsed ROM data
 		fulfill(parsed);
 
 	});
