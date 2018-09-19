@@ -2,7 +2,7 @@ const DEBUG=true;
 
 const fs = require('fs'),
       Promise = require('promise'),
-      instructions = JSON.parse(fs.readFileSync('./dis_tools/instructions.json'))
+      instructions = JSON.parse(fs.readFileSync('./dis_tools/instructions.json'));
 
 console.log(instructions['0xef']);
 
@@ -12,9 +12,9 @@ if (DEBUG)
 function parse(rom, metadata, numBytes) {
 	return new Promise((fulfill, reject) => {
 		let header = [],
-		    lines = [],
-        	    parsedHex = [],
-		    pc = 0;
+			lines = [],
+			parsedHex = [],
+			pc = 0;
 
 		// truncate header data if necessary
 		checkHeader(metadata, rom)

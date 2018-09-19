@@ -52,9 +52,9 @@ app.post('/', upload.single('romfile'), (req, res) => {
 				// Handle returned (parsed) ROM data
 				res.status(200).send(data);
 			})
-			.catch((err, message, extra) => {
+			.catch(err => {
 				// Handle errors from ROM parsing
-				res.status(500).send(message);
+				res.status(500).send(err);
 			});
 
 		console.error('should not get here');
