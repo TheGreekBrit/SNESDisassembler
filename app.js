@@ -5,7 +5,7 @@ const bodyParser = require('body-parser'),
       fs = require('fs'),
       multer = require('multer');
 
-const parseChunk = require('./dis_tools/dis.js').parse;
+const romParse = require('./dis_tools/dis.js').parse;
 
 const upload = multer({destination: 'uploads/', fileFilter: fileFilter});
 const app = express();
@@ -29,21 +29,33 @@ app.post('/', upload.single('romfile'), (req, res, next) => {
                     romdata = romfile.buffer,
                     bytes = req.body['bytes'];
 
-                if(bytes > romfile.size)
+                if (bytes > romfile.size)
                         res.status(400).send(`<h1><b>ERROR: Byte count exceeds ROM size<br />Bytes given: ${bytes}<br />ROM Size: ${romfile.size} bytes</b></h1>`);
 
-                else if(bytes < 0)
+                else if (bytes < 0)
                         res.status(400).send('<h1><b>ERROR: Byte count may not be negative</b></h1>');
 
-                else if(isNaN(parseInt(bytes)))
+                else if (isNaN(parseInt(bytes)))
                         res.status(400).send('<h1><b>ERROR: Byte count must be a positivenumber</b></h1>');
+
+				/*
+				 * ROM LOADED AT THIS POINT
+				 * @romdata - buffer of ROM bytes
+				 * @romfile - file metadata
+				 */
+
+
+				romParse(romdata, romfile);
+
 
                 let parsedBytes = parseChunk(romdata, bytes);
 
                 console.log('file:',romfile);
                 //console.log('bytes:',bytes);
                 //console.log(parsedBytes.join(' '));
-
+				
+				// TODO
+				// refactor away the ugly
                 res.status(200).send(`${romfile.originalname}<br />Size: ${romfile.size} bytes<br /><br /><b>First ${bytes} bytes:</b><br /><br />${parsedBytes.join(' ')}`);
         }
 });
@@ -58,6 +70,9 @@ if (module === require.main) {
   // [END server]
 }
 
+// Limit file extensions to the following:
+// .smc - headered SNES
+// .sfc - unheadered SNES
 function fileFilter(arg, file, cb) {
         if(file.originalname.endsWith('.smc') || file.originalname.endsWith('.sfc'))
                 cb(null,true);

@@ -1,9 +1,12 @@
 DEBUG=true;
 
+const fs = require('fs'),
+	instructions = JSON.parse(fs.readFileSync('./instructions.json'));
+
+console.log(instructions['0xef']);
+
 if (DEBUG)
         console.log('DEBUG ENABLED');
-
-let fs = require('fs');
 
 //let readStream = fs.createReadStream('./yoshi.sfc');
 

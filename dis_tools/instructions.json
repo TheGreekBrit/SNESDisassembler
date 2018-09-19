@@ -1,4 +1,4 @@
-"instructions": {
+{
     "0x61": {"opcode": "ADC", "length": 2, "prefix": "$" },
     "0x63": {"opcode": "ADC", "length": 2, "prefix": "$" },
     "0x65": {"opcode": "ADC", "length": 2, "prefix": "$" },
