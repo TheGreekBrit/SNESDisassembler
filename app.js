@@ -3,7 +3,8 @@
 const bodyParser = require('body-parser'),
       express = require('express'),
       fs = require('fs'),
-      multer = require('multer');
+      multer = require('multer'),
+      Promise = require('promise');
 
 const romParse = require('./dis_tools/dis.js').parse;
 
@@ -38,15 +39,24 @@ app.post('/', upload.single('romfile'), (req, res, next) => {
                 else if (isNaN(parseInt(bytes)))
                         res.status(400).send('<h1><b>ERROR: Byte count must be a positivenumber</b></h1>');
 
-				/*
-				 * ROM LOADED AT THIS POINT
-				 * @romdata - buffer of ROM bytes
-				 * @romfile - file metadata
-				 */
+		/*
+		 * ROM LOADED AT THIS POINT
+		 * @romdata - buffer of ROM bytes
+		 * @romfile - file metadata
+		 */
 
 
-				romParse(romdata, romfile);
+		romParse(romdata, romfile)
+			.then((data, extra) => {
+				// Handle returned (parsed) ROM data
+				res.status(200).send(data);
+			})
+			.catch((err, message, extra) => {
+				// Handle errors from ROM parsing
+				res.status(500).send(message);
+			});
 
+		console.error('should not get here');
 
                 let parsedBytes = parseChunk(romdata, bytes);
 
@@ -56,7 +66,7 @@ app.post('/', upload.single('romfile'), (req, res, next) => {
 				
 				// TODO
 				// refactor away the ugly
-                res.status(200).send(`${romfile.originalname}<br />Size: ${romfile.size} bytes<br /><br /><b>First ${bytes} bytes:</b><br /><br />${parsedBytes.join(' ')}`);
+                //res.status(200).send(`${romfile.originalname}<br />Size: ${romfile.size} bytes<br /><br /><b>First ${bytes} bytes:</b><br /><br />${parsedBytes.join(' ')}`);
         }
 });
 
