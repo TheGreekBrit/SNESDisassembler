@@ -1,4 +1,5 @@
 'use strict';
+DEBUG=1;
 
 const bodyParser = require('body-parser'),
       express = require('express'),
@@ -46,18 +47,18 @@ app.post('/', upload.single('romfile'), (req, res) => {
 		 * @romdata - buffer of ROM bytes
 		 * @romfile - file metadata
 		 */
-
+		if (DEBUG) console.log('ROM loaded');
 		romParse(romdata, romfile)
-			.then((data, extra) => {
+			.then((data, extra=null) => {
+				if (DEBUG) console.log('finished parsing ROM, sending 200');
 				// Handle returned (parsed) ROM data
 				res.status(200).send(data);
 			})
 			.catch(err => {
 				// Handle errors from ROM parsing
+				if (DEBUG) console.error('ERROR PARSING ROM', err);
 				res.status(500).send(err);
 			});
-
-		console.error('should not get here');
 
         }
 });
