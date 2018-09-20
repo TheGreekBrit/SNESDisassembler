@@ -1,4 +1,4 @@
-const DEBUG = 0;
+const DEBUG = 2;
 //const OVERRIDE = 200;
 
 const fs = require('fs'),
@@ -15,33 +15,29 @@ if (DEBUG) console.log('DEBUG ENABLED');
  * Master parse function. Called from the main app.
  * @rom - buffer of rom bytes, integers
  * @metadata - rom file metadata
+ * @pc - initial program counter
  * @header - array of header bytes, if any
  * @numBytes - number of bytes to disassemble, provided by the user when uploading a rom
  *
  * Returns:
  * @lines - joined string of all disassembled bytes, separated by newlines
  */
-function parse(rom, metadata, header=[], numBytes) {
+function parse(rom, metadata, pc=0, header=[], numBytes) {
 	return new Promise((fulfill, reject) => {
 		let flags = {},
 		    lines = [],
 		    numBytesToDis = numBytes || rom.length,
-		    parsedHex = [],
-		    pc = 0;
+		    parsedHex = [];
 		
-		// Parse ROM line-by-line
-		if (DEBUG) console.log('starting ROM parse');
-
-		parseRecursive(rom, pc, flags, numBytesToDis, (err, data) => {
-			if (err) {
+		if (DEBUG) console.log('begin ROM parse');
+		parseRecursive(rom, pc, flags, numBytesToDis, (errCode, data) => {
+			if (errCode)
 				reject({err: 2, msg: 'ERROR PARSING LINE', data: data});
-				return;
-			}
+
 			if (DEBUG) console.log('COMPLETE! RETURNING...');
 			if (LINES_DATA && LINES_DIS)
 				fulfill(LINES_DIS.join('<br />'));
 		});
-
 	});
 }
 
@@ -73,6 +69,20 @@ function toHex(num, prefix=false, padSize=2) {
         return prefix ? '0x'.concat(Number(num).toString(16).padStart(padSize, '0')) : Number(num).toString(16).padStart(padSize, '0');
 }
 
+function isHex(str) {
+	if (DEBUG > 1) console.log('begin isHex:('+str+')');
+
+	let re_hexch = /(0[xX])?[0-9a-fA-F]{1,6}/,
+	    re_hexprefix = /^0[xX]/;
+	
+	if (str.match(re_hexch)) {
+		if (!str.match(re_hexprefix))
+			str = '0x'.concat(str);
+
+		return Number(str);	// validate "0xyyyyyy"
+	} else return false;
+}
+
 /*
  * Begin ROM parsing. Recursively called until the whole ROM is disassembled.
  * Kicks off the readLine() function, which disassembles each line
@@ -82,8 +92,8 @@ function toHex(num, prefix=false, padSize=2) {
  * @callback - callback to parse(), executed either when we finish or when there's an error
  */
 function parseRecursive(rom, pc, flags, numBytesToDis, callback) {
-	console.log('bytes:',numBytesToDis)
-
+	if (DEBUG > 1) console.log('start parseRecursive()');
+	// parse one line (opcode + 1-3 args, or data)
 	readLine(rom, pc, flags)
 		.then((newline, newpc, newflags) => {
 			if (DEBUG) console.log('finished:', pc);
@@ -105,7 +115,7 @@ function parseRecursive(rom, pc, flags, numBytesToDis, callback) {
 }
 
 /*
- * Parse line at program counter @pc
+ * Parse line (byte.opcode.length bytes) at program counter @pc
  * @rom - buffer of rom bytes in hex
  * @pc - current program counter
  * @flags - object containing processor flags
@@ -117,19 +127,22 @@ function parseRecursive(rom, pc, flags, numBytesToDis, callback) {
  */
 function readLine(rom, pc=0, flags='') {
 	return new Promise((fulfill, reject) => {
-		let address = '0x',
+		//if (DEBUG) console.log('rom size:', rom.length, 'pc:', pc, 'flags:', flags);
+
+		let address = pc,
 		    args = [],
 		    bytesRaw = [],
 		    currByte = '0x',
 		    length = 0,
 		    line = {},
 		    opcode = '',
+		    pc = Number(pc),
 		    prefix = '';
-
-		address = toHex(pc, true, 6);
+		
 		currByte = toHex(rom[pc], true);
 		
-		if (DEBUG) console.log('current byte:', currByte);
+		if (DEBUG) console.log('current byte (dec):', rom[Number(pc)]);
+		if (DEBUG) console.log('current byte (hex):', currByte);
 		
 		opcode = instructions[currByte].opcode;
 		prefix = instructions[currByte].prefix;
@@ -160,7 +173,7 @@ function readLine(rom, pc=0, flags='') {
 				let tab = '&nbsp;&nbsp;&nbsp;&nbsp;'; // four spaces
 				if (DEBUG) console.log('running line concat (line.line())');
 				// TODO refactor and space properly
-				return `${address}${tab}${tab}${opcode}${tab}${length>1?prefix:tab}${args.reverse().join('')}${tab}${tab}${tab}${tab};${tab}BYTES: ${bytesRaw.join(' ')}${tab}${tab}FLAGS: ${flags}`;
+				return `${toHex(address,true,6)}${tab}${tab}${opcode}${tab}${length>1?prefix:tab}${args.reverse().join('')}${tab}${tab}${tab}${tab};${tab}BYTES: ${bytesRaw.join(' ')}${tab}${tab}FLAGS: ${flags}`;
 			}
 		}
 
@@ -178,5 +191,7 @@ function readLine(rom, pc=0, flags='') {
 
 module.exports = {
 	checkHeader: checkHeader,
+	isHex: isHex,
+	toHex: toHex,
         romParse: parse
 }
