@@ -1,4 +1,4 @@
-const DEBUG = 2;
+const DEBUG = 0;
 //const OVERRIDE = 200;
 
 const fs = require('fs'),
@@ -22,21 +22,24 @@ if (DEBUG) console.log('DEBUG ENABLED');
  * Returns:
  * @lines - joined string of all disassembled bytes, separated by newlines
  */
-function parse(rom, metadata, pc=0, header=[], numBytes) {
+function parse(rom, metadata, pc, header=[], numBytes, callback) {
 	return new Promise((fulfill, reject) => {
 		let flags = {},
-		    lines = [],
-		    numBytesToDis = numBytes || rom.length,
-		    parsedHex = [];
-		
-		if (DEBUG) console.log('begin ROM parse');
-		parseRecursive(rom, pc, flags, numBytesToDis, (errCode, data) => {
-			if (errCode)
-				reject({err: 2, msg: 'ERROR PARSING LINE', data: data});
+			lines = [],
+			numBytesToDis = parseInt(numBytes) || rom.length,
+			parsedHex = [];
 
+		if (DEBUG) console.log('begin ROM parse');
+		if (DEBUG) console.log('pc:',pc);
+		parseRecursive(rom, pc, pc, flags, numBytesToDis, (err, data) => {
+			if (err)
+				reject({err: 2, msg: 'ERROR PARSING LINE', data: data})
+			//.then(data => {
 			if (DEBUG) console.log('COMPLETE! RETURNING...');
 			if (LINES_DATA && LINES_DIS)
 				fulfill(LINES_DIS.join('<br />'));
+			//})
+			//.catch(err => reject({err: 2, msg: 'ERROR PARSING LINE', data: err}));
 		});
 	});
 }
@@ -49,12 +52,13 @@ function parse(rom, metadata, pc=0, header=[], numBytes) {
  * @flags - object containing processor flags
  * @callback - callback to parse(), executed either when we finish or when there's an error
  */
-function parseRecursive(rom, pc, flags, numBytesToDis, callback) {
+function parseRecursive(rom, pc=0, pcstart=0, flags, numBytesToDis, callback) {
 	if (DEBUG > 1) console.log('start parseRecursive()');
+	if (DEBUG > 1) console.log('pcstart:',pcstart);
 	// parse one line (opcode + 1-3 args, or data)
 	readLine(rom, pc, flags)
 		.then((newline, newpc, newflags) => {
-			if (DEBUG) console.log('finished:', pc);
+			if (DEBUG) console.log('finished:', newpc);
 			pc += newline.length;
 			if (DEBUG) console.log('starting:' + pc);
 
@@ -63,13 +67,20 @@ function parseRecursive(rom, pc, flags, numBytesToDis, callback) {
 			LINES_DIS.push(newline.line());
 
 			// continue until we run out of bytes
-			if (pc <= numBytesToDis)
-				parseRecursive(rom, pc, newflags, numBytesToDis, callback);
+			if (pc <= pcstart+numBytesToDis) {
+				if (DEBUG > 1) console.log('continuing to next line. pcstart:', pcstart);
+				if (DEBUG > 1) console.log('numBytesToDis:', numBytesToDis);
+				if (DEBUG > 1) console.log('pc:', pc);
+				parseRecursive(rom, pc, pcstart, newflags, numBytesToDis, callback);
+			}
 			else
-				callback(false, LINES_DIS); // callback to main function
+				callback(0, LINES_DIS); // callback to main function
 		})
 		// throw error if there's any problems
-		.catch(err => { callback(true, err); });
+		.catch(err => {
+			callback(1, err);
+		});
+
 }
 
 /*
@@ -83,9 +94,9 @@ function parseRecursive(rom, pc, flags, numBytesToDis, callback) {
  * @pc - program counter, unaltered
  * @flags - object containing processor flags
  */
-function readLine(rom, pc=0, flags='') {
+function readLine(rom, pc, flags='') {
 	return new Promise((fulfill, reject) => {
-		//if (DEBUG) console.log('rom size:', rom.length, 'pc:', pc, 'flags:', flags);
+		if (DEBUG) console.log('rom size:', rom.length, 'pc:', pc, 'flags:', flags);
 
 		let address = pc,
 		    args = [],
@@ -94,8 +105,9 @@ function readLine(rom, pc=0, flags='') {
 		    length = 0,
 		    line = {},
 		    opcode = '',
-		    pc = Number(pc),
 		    prefix = '';
+
+		pc = Number(pc);
 		
 		currByte = toHex(rom[pc], true);
 		
@@ -133,7 +145,7 @@ function readLine(rom, pc=0, flags='') {
 				// TODO refactor and space properly
 				return `${toHex(address,true,6)}${tab}${tab}${opcode}${tab}${length>1?prefix:tab}${args.reverse().join('')}${tab}${tab}${tab}${tab};${tab}BYTES: ${bytesRaw.join(' ')}${tab}${tab}FLAGS: ${flags}`;
 			}
-		}
+		};
 
 		if (line) {
 			if (DEBUG) console.log('finished parsing line, fulfilling...');
@@ -150,14 +162,15 @@ function readLine(rom, pc=0, flags='') {
 /*
  * Checks if the ROM has an SMC header
  * @metadata - rom file metadata
+ * @rom - buffer of rom bytes
  *
  * Returns:
  * @hasHeader - bool indicating whether the ROM has a header
  */
-function checkHeader(metadata, romdata=null) {
+function checkHeader(metadata, rom=null) {
 	return new Promise((fulfill, reject) => {
 		if (!metadata)
-	reject('bad metadata');
+			reject('bad metadata');
 	fulfill(metadata.originalname.endsWith('.smc'));
 });
 }
@@ -175,7 +188,7 @@ function toHex(num, prefix=false, padSize=2) {
 	return prefix ? '0x'.concat(Number(num).toString(16).padStart(padSize, '0')) : Number(num).toString(16).padStart(padSize, '0');
 }
 
-function isHex(str) {
+function isHex(str, callback) {
 	if (DEBUG > 1) console.log('begin isHex:('+str+')');
 
 	let re_hexch = /(0[xX])?[0-9a-fA-F]{1,6}/,
@@ -185,8 +198,8 @@ function isHex(str) {
 		if (!str.match(re_hexprefix))
 			str = '0x'.concat(str);
 
-		return Number(str);	// validate "0xyyyyyy"
-	} else return false;
+		callback(true, Number(str));	// validate "0xyyyyyy"
+	} else callback(false, null);
 }
 
 
