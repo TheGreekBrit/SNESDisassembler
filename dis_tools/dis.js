@@ -36,8 +36,11 @@ function parse(rom, metadata, pc, header=[], numBytes, callback) {
 				reject({err: 2, msg: 'ERROR PARSING LINE', data: data})
 			//.then(data => {
 			if (DEBUG) console.log('COMPLETE! RETURNING...');
-			if (LINES_DATA && LINES_DIS)
+			if (LINES_DATA && LINES_DIS) {
+				LINES_DATA = [];
 				fulfill(LINES_DIS.join('<br />'));
+				LINES_DIS = [];
+			}
 			//})
 			//.catch(err => reject({err: 2, msg: 'ERROR PARSING LINE', data: err}));
 		});

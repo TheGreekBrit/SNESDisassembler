@@ -1,6 +1,6 @@
 {
   "name": "snes-disassembler",
-  "version": "0.1",
+  "version": "0.0.1",
   "description": "disassembles snes games",
   "repository": "https://github.com/TheGreekBrit/YoshiDisassembler",
   "private": false,
