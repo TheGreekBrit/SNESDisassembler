@@ -42,48 +42,6 @@ function parse(rom, metadata, pc=0, header=[], numBytes) {
 }
 
 /*
- * Checks if the ROM has an SMC header
- * @metadata - rom file metadata
- *
- * Returns:
- * @hasHeader - bool indicating whether the ROM has a header
- */
-function checkHeader(metadata, romdata=null) {
-	return new Promise((fulfill, reject) => {
-		if (!metadata)
-			reject('bad metadata');
-		fulfill(metadata.originalname.endsWith('.smc'));
-	});
-}
-
-/*
- * Converts integers to hexadecimal
- * @num - number to convert
- * @prefix - boolean specifying whether '0x' should be prefixed to the hex digit. default: false.
- * @padSize - number of digits to pad the hex digit to. default: 2
- *
- * Returns:
- * @hex - converted hexadecimal digit
- */
-function toHex(num, prefix=false, padSize=2) {
-        return prefix ? '0x'.concat(Number(num).toString(16).padStart(padSize, '0')) : Number(num).toString(16).padStart(padSize, '0');
-}
-
-function isHex(str) {
-	if (DEBUG > 1) console.log('begin isHex:('+str+')');
-
-	let re_hexch = /(0[xX])?[0-9a-fA-F]{1,6}/,
-	    re_hexprefix = /^0[xX]/;
-	
-	if (str.match(re_hexch)) {
-		if (!str.match(re_hexprefix))
-			str = '0x'.concat(str);
-
-		return Number(str);	// validate "0xyyyyyy"
-	} else return false;
-}
-
-/*
  * Begin ROM parsing. Recursively called until the whole ROM is disassembled.
  * Kicks off the readLine() function, which disassembles each line
  * @rom - buffer of rom bytes
@@ -186,6 +144,49 @@ function readLine(rom, pc=0, flags='') {
 			reject(line);
 		}
 	});
+}
+
+
+/*
+ * Checks if the ROM has an SMC header
+ * @metadata - rom file metadata
+ *
+ * Returns:
+ * @hasHeader - bool indicating whether the ROM has a header
+ */
+function checkHeader(metadata, romdata=null) {
+	return new Promise((fulfill, reject) => {
+		if (!metadata)
+	reject('bad metadata');
+	fulfill(metadata.originalname.endsWith('.smc'));
+});
+}
+
+/*
+ * Converts integers to hexadecimal
+ * @num - number to convert
+ * @prefix - boolean specifying whether '0x' should be prefixed to the hex digit. default: false.
+ * @padSize - number of digits to pad the hex digit to. default: 2
+ *
+ * Returns:
+ * @hex - converted hexadecimal digit
+ */
+function toHex(num, prefix=false, padSize=2) {
+	return prefix ? '0x'.concat(Number(num).toString(16).padStart(padSize, '0')) : Number(num).toString(16).padStart(padSize, '0');
+}
+
+function isHex(str) {
+	if (DEBUG > 1) console.log('begin isHex:('+str+')');
+
+	let re_hexch = /(0[xX])?[0-9a-fA-F]{1,6}/,
+		re_hexprefix = /^0[xX]/;
+
+	if (str.match(re_hexch)) {
+		if (!str.match(re_hexprefix))
+			str = '0x'.concat(str);
+
+		return Number(str);	// validate "0xyyyyyy"
+	} else return false;
 }
 
 
