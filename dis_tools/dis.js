@@ -1,15 +1,105 @@
-const DEBUG = 0;
+const DEBUG = 2;
 //const OVERRIDE = 200;
 
-const fs = require('fs'),
-      Promise = require('promise'),
-      instructions = JSON.parse(fs.readFileSync('./dis_tools/instructions.json'));
+const _ = require('lodash'),
+	fs = require('fs'),
+	Promise = require('promise'),
+	instructions = JSON.parse(fs.readFileSync('./dis_tools/instructions.json'));
 
 let LINES_DATA = [], // raw data objects for each line
-    LINES_DIS = [];  // "human-readable" disassembled string
+	LINES_DIS = [];  // "human-readable" disassembled string
 
 if (DEBUG) console.log(instructions['0xef']);
 if (DEBUG) console.log('DEBUG ENABLED');
+
+function initFlags() {
+	this.base = 'EnvMXdizc';
+	this.current = 0b00110000;
+	this.get = function () { return this.current.toString(2) };
+	this.set = function (VAL) { this.current = VAL };
+	this.getBit = POS => { return this.current & POS; };
+	this.setBit = function (POS) {
+		if (DEBUG) console.log('setting bit:', POS);
+		this.current = this.current | (1 << POS);
+	};
+	this.clearBit = POS => this.current = this.current & ~(1 << POS);
+
+	this.getString = function () {
+		console.log(this.base);
+		return _.split(this.base,'')
+			.reverse()
+			.map((ch, idx, arr) => {
+				console.log(ch,this.getBit(2**idx));
+				return this.getBit(2**idx)? ch.toUpperCase(): ch.toLowerCase();
+			})
+			.reverse()
+			.join('');
+	};
+
+	this.carry = {
+		pos: 0,     // position
+		get: () => this.getBit(this.carry.pos),
+		set: () => { this.setBit(this.carry.pos) },
+		reset: () => this.clearBit(this.carry.pos),
+		triggers: [/SEC/, /CLC/]
+	};
+	this.zero = {
+		pos: 1,     // position
+		get: () => this.getBit(this.zero.pos),
+		set: () => this.setBit(this.zero.pos),
+		reset: () => this.clearBit(this.zero.pos),
+		triggers: []
+	};
+	this.irq = {
+		pos: 2,     // position
+		get: () => this.getBit(this.irq.pos),
+		set: () => this.setBit(this.irq.pos),
+		reset: () => this.clearBit(this.irq.pos),
+		triggers: [/SEI/, /CLI/]
+	};
+	this.decimal = {
+		pos: 3,     // position
+		get: () => this.getBit(this.decimal.pos),
+		set: () => this.setBit(this.decimal.pos),
+		reset: () => this.clearBit(this.decimal.pos),
+		triggers: [/SED/, /CLD/]
+	};
+	this.index8bit = {
+		pos: 4,     // position
+		get: () => this.getBit(this.index8bit.pos),
+		set: () => this.setBit(this.index8bit.pos),
+		reset: () => this.clearBit(this.index8bit.pos),
+		triggers: [/REP/, /SEP/]
+	};
+	this.accumulator8bit = {
+		pos: 5,     // position
+		get: () => this.getBit(this.accumulator8bit.pos),
+		set: () => this.setBit(this.accumulator8bit.pos),
+		reset: () => this.clearBit(this.accumulator8bit.pos),
+		triggers: [/SEC/, /CLC/]
+	};
+	this.overflow = {
+		pos: 6,     // position
+		get: () => this.getBit(this.overflow.pos),
+		set: () => this.setBit(this.overflow.pos),
+		reset: () => this.clearBit(this.overflow.pos),
+		triggers: [/SEP/, /CLV/]
+	};
+	this.negative = {
+		pos: 7,     // position
+		get: () => this.getBit(this.negative.pos),
+		set: () => this.setBit(this.negative.pos),
+		reset: () => this.clearBit(this.negative.pos),
+		triggers: []
+	};
+	this.emulation = {
+		pos: 8,     // position
+		get: () => this.getBit(this.emulation.pos),
+		set: () => this.setBit(this.emulation.pos),
+		reset: () => this.clearBit(this.emulation.pos),
+		triggers: ['XCE']
+	};
+}
 
 /*
  * Master parse function. Called from the main app.
@@ -23,17 +113,16 @@ if (DEBUG) console.log('DEBUG ENABLED');
  * @lines - joined string of all disassembled bytes, separated by newlines
  */
 function parse(rom, metadata, pc, header=[], numBytes, callback) {
-	return new Promise((fulfill, reject) => {
-		let flags = {},
-			lines = [],
-			numBytesToDis = parseInt(numBytes) || rom.length,
-			parsedHex = [];
+	let numBytesToDis = parseInt(numBytes) || rom.length,
+		flags = new initFlags();
 
-		if (DEBUG) console.log('begin ROM parse');
+	if (DEBUG) console.log('begin ROM parse');
+
+	return new Promise((fulfill, reject) => {
 		if (DEBUG) console.log('pc:',pc);
 		parseRecursive(rom, pc, pc, flags, numBytesToDis, (err, data) => {
 			if (err)
-				reject({err: 2, msg: 'ERROR PARSING LINE', data: data})
+				reject({err: 2, msg: 'ERROR PARSING LINE', data: data});
 			//.then(data => {
 			if (DEBUG) console.log('COMPLETE! RETURNING...');
 			if (LINES_DATA && LINES_DIS) {
@@ -60,7 +149,8 @@ function parseRecursive(rom, pc=0, pcstart=0, flags, numBytesToDis, callback) {
 	if (DEBUG > 1) console.log('pcstart:',pcstart);
 	// parse one line (opcode + 1-3 args, or data)
 	readLine(rom, pc, flags)
-		.then((newline, newpc, newflags) => {
+		.then(function (newline, newpc, newflags) {
+			console.log('FLAGS:',flags.getString());
 			if (DEBUG) console.log('finished:', newpc);
 			pc += newline.length;
 			if (DEBUG) console.log('starting:' + pc);
@@ -74,7 +164,7 @@ function parseRecursive(rom, pc=0, pcstart=0, flags, numBytesToDis, callback) {
 				if (DEBUG > 1) console.log('continuing to next line. pcstart:', pcstart);
 				if (DEBUG > 1) console.log('numBytesToDis:', numBytesToDis);
 				if (DEBUG > 1) console.log('pc:', pc);
-				parseRecursive(rom, pc, pcstart, newflags, numBytesToDis, callback);
+				parseRecursive(rom, pc, pcstart, flags, numBytesToDis, callback);
 			}
 			else
 				callback(0, LINES_DIS); // callback to main function
@@ -97,28 +187,30 @@ function parseRecursive(rom, pc=0, pcstart=0, flags, numBytesToDis, callback) {
  * @pc - program counter, unaltered
  * @flags - object containing processor flags
  */
-function readLine(rom, pc, flags='') {
+function readLine(rom, pc, flags) {
 	return new Promise((fulfill, reject) => {
 		if (DEBUG) console.log('rom size:', rom.length, 'pc:', pc, 'flags:', flags);
 
 		let address = pc,
 		    args = [],
 		    bytesRaw = [],
+			compiled = '',
 		    currByte = '0x',
+			format = '',
 		    length = 0,
 		    line = {},
 		    opcode = '',
+			parsed = '',
 		    prefix = '';
 
 		pc = Number(pc);
-		
 		currByte = toHex(rom[pc], true);
 		
 		if (DEBUG) console.log('current byte (dec):', rom[Number(pc)]);
 		if (DEBUG) console.log('current byte (hex):', currByte);
 		
 		opcode = instructions[currByte].opcode;
-		prefix = instructions[currByte].prefix;
+		format = instructions[currByte].format;
 		length = instructions[currByte].length;
 
 		if (DEBUG) console.log('reading line args');
@@ -133,10 +225,43 @@ function readLine(rom, pc, flags='') {
 			bytesRaw.push(toHex(rom[pc+i]));
 		}
 
+		compiled = _.template(format),
+			parsed = compiled({bytes: args.reverse().join('')})
+
+		switch(opcode) {
+			case 'SEI':
+				flags.irq.set();
+				break;
+			case 'CLI':
+				flags.irq.reset();
+				break;
+			case 'SEC':
+				flags.carry.set();
+				break;
+			case 'CLC':
+				flags.carry.reset();
+				break;
+			case 'SED':
+				flags.decimal.set();
+				break;
+			case 'CLD':
+				flags.decimal.reset();
+				break;
+			case 'CLV':
+				flags.overflow.reset();
+				break;
+			case 'REP':
+				flags.clearBit(isHex(args[0], (e, bit) => e? bit: null));
+				break;
+
+			default:
+				break;
+		}
+
 		line = {
 			address: address,
 			opcode: opcode,
-			prefix: prefix,
+			format: parsed,
 			length: length,
 			bytesRaw: bytesRaw,
 			args: args,
@@ -146,9 +271,10 @@ function readLine(rom, pc, flags='') {
 				let tab = '&nbsp;&nbsp;&nbsp;&nbsp;'; // four spaces
 				if (DEBUG) console.log('running line concat (line.line())');
 				// TODO refactor and space properly
-				return `${toHex(address,true,6)}${tab}${tab}${opcode}${tab}${length>1?prefix:tab}${args.reverse().join('')}${tab}${tab}${tab}${tab};${tab}BYTES: ${bytesRaw.join(' ')}${tab}${tab}FLAGS: ${flags}`;
+				return `${toHex(address,true,6)}${tab}${tab}${opcode}${tab}${parsed}${tab}${tab}${tab}${tab};${tab}BYTES: ${bytesRaw.join(' ')}${tab}${tab}FLAGS: ${flags.getString()}`;
 			}
 		};
+		//console.log('flags:',flags)
 
 		if (line) {
 			if (DEBUG) console.log('finished parsing line, fulfilling...');

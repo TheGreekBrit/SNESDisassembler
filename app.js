@@ -1,4 +1,4 @@
-const DEBUG = 0;
+const DEBUG = 2;
 
 const bodyParser = require('body-parser'),
       express = require('express'),
