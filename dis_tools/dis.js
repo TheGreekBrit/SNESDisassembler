@@ -1,12 +1,12 @@
 const DEBUG = 2;
 //const OVERRIDE = 200;
 
-require('./instructions.js');
+let opcodeFunctions = require('./instructions.js');
 const _ = require('lodash'),
 	fs = require('fs'),
 	os = require('os'),
 	Promise = require('promise'),
-	instructions = JSON.parse(fs.readFileSync('./instructions.json'));
+	instructions = JSON.parse(fs.readFileSync('./dis_tools/instructions.json'));
 
 let LINES_DATA = [], // raw data objects for each line
 	LINES_DIS = [];  // "human-readable" disassembled string
@@ -215,7 +215,7 @@ function readLine(rom, pc, flags) {
 		opcode  = instructions[currByte].opcode;
 		format  = instructions[currByte].format;
 		length  = instructions[currByte].length;
-		run     = instructions[currByte].run;
+		//run     = instructions[currByte].run;
 
 		if (DEBUG) console.log('reading line args');
 		// read 2-3 additional byte args
@@ -234,7 +234,8 @@ function readLine(rom, pc, flags) {
 			parsed = compiled({bytes: args.reverse().join('')})
 
 		if (DEBUG) console.log('executing run function');
-		os.exec(opcode)
+		//eval("opcodeFunctions." + opcode + "(args)");
+		flags = opcodeFunctions[opcode](args, flags);
 
 		line = {
 			address: address,
