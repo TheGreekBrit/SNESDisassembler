@@ -1,10 +1,12 @@
 const DEBUG = 2;
 //const OVERRIDE = 200;
 
+require('./instructions.js');
 const _ = require('lodash'),
 	fs = require('fs'),
+	os = require('os'),
 	Promise = require('promise'),
-	instructions = JSON.parse(fs.readFileSync('./dis_tools/instructions.json'));
+	instructions = JSON.parse(fs.readFileSync('./instructions.json'));
 
 let LINES_DATA = [], // raw data objects for each line
 	LINES_DIS = [];  // "human-readable" disassembled string
@@ -192,16 +194,17 @@ function readLine(rom, pc, flags) {
 		if (DEBUG) console.log('rom size:', rom.length, 'pc:', pc, 'flags:', flags);
 
 		let address = pc,
-		    args = [],
-		    bytesRaw = [],
-			compiled = '',
-		    currByte = '0x',
-			format = '',
-		    length = 0,
-		    line = {},
-		    opcode = '',
-			parsed = '',
-		    prefix = '';
+		    args        = [],
+		    bytesRaw    = [],
+			compiled    = '',
+		    currByte    = '0x',
+			format      = '',
+		    length      = 0,
+		    line        = {},
+		    opcode      = '',
+			parsed      = '',
+		    prefix      = '',
+			run         = e => console.log('No run function specified');
 
 		pc = Number(pc);
 		currByte = toHex(rom[pc], true);
@@ -209,9 +212,10 @@ function readLine(rom, pc, flags) {
 		if (DEBUG) console.log('current byte (dec):', rom[Number(pc)]);
 		if (DEBUG) console.log('current byte (hex):', currByte);
 		
-		opcode = instructions[currByte].opcode;
-		format = instructions[currByte].format;
-		length = instructions[currByte].length;
+		opcode  = instructions[currByte].opcode;
+		format  = instructions[currByte].format;
+		length  = instructions[currByte].length;
+		run     = instructions[currByte].run;
 
 		if (DEBUG) console.log('reading line args');
 		// read 2-3 additional byte args
@@ -225,38 +229,12 @@ function readLine(rom, pc, flags) {
 			bytesRaw.push(toHex(rom[pc+i]));
 		}
 
+		if (DEBUG>1) console.log('assembling line string');
 		compiled = _.template(format),
 			parsed = compiled({bytes: args.reverse().join('')})
 
-		switch(opcode) {
-			case 'SEI':
-				flags.irq.set();
-				break;
-			case 'CLI':
-				flags.irq.reset();
-				break;
-			case 'SEC':
-				flags.carry.set();
-				break;
-			case 'CLC':
-				flags.carry.reset();
-				break;
-			case 'SED':
-				flags.decimal.set();
-				break;
-			case 'CLD':
-				flags.decimal.reset();
-				break;
-			case 'CLV':
-				flags.overflow.reset();
-				break;
-			case 'REP':
-				flags.clearBit(isHex(args[0], (e, bit) => e? bit: null));
-				break;
-
-			default:
-				break;
-		}
+		if (DEBUG) console.log('executing run function');
+		os.exec(opcode)
 
 		line = {
 			address: address,
@@ -300,8 +278,8 @@ function checkHeader(metadata, rom=null) {
 	return new Promise((fulfill, reject) => {
 		if (!metadata)
 			reject('bad metadata');
-	fulfill(metadata.originalname.endsWith('.smc'));
-});
+		fulfill(metadata.originalname.endsWith('.smc'));
+	});
 }
 
 /*
@@ -337,4 +315,4 @@ module.exports = {
 	isHex: isHex,
 	toHex: toHex,
         romParse: parse
-}
+};
