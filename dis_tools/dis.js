@@ -14,93 +14,123 @@ let LINES_DATA = [], // raw data objects for each line
 if (DEBUG) console.log(instructions['0xef']);
 if (DEBUG) console.log('DEBUG ENABLED');
 
-function initFlags() {
-	this.base = 'EnvMXdizc';
-	this.current = 0b00110000;
-	this.get = function () { return this.current.toString(2) };
-	this.set = function (VAL) { this.current = VAL };
-	this.getBit = POS => { return this.current & POS; };
-	this.setBit = function (POS) {
-		if (DEBUG) console.log('setting bit:', POS);
-		this.current = this.current | (1 << POS);
-	};
-	this.clearBit = POS => this.current = this.current & ~(1 << POS);
+//todo move this & clean up
+class Flags {
+	constructor() {
+		this.base = 'EnvMXdizc';
+		this.current = 0b100110000;
+		this.set = VAL => this.current = VAL;
 
-	this.getString = function () {
-		console.log(this.base);
-		return _.split(this.base,'')
-			.reverse()
-			.map((ch, idx, arr) => {
-				console.log(ch,this.getBit(2**idx));
-				return this.getBit(2**idx)? ch.toUpperCase(): ch.toLowerCase();
-			})
-			.reverse()
-			.join('');
-	};
+		this.getBit = POS => this.current & POS; //(1 << POS);
+		this.setBit = POS => {
+			if (DEBUG) console.log('setting bit:', POS, this.current);
+			this.current |= (1 << POS);
+			console.log(this.current)
+		};
+		this.clearBit = POS => this.current = this.current & ~(1 << POS);
 
-	this.carry = {
-		pos: 0,     // position
-		get: () => this.getBit(this.carry.pos),
-		set: () => { this.setBit(this.carry.pos) },
-		reset: () => this.clearBit(this.carry.pos),
-		triggers: [/SEC/, /CLC/]
-	};
-	this.zero = {
-		pos: 1,     // position
-		get: () => this.getBit(this.zero.pos),
-		set: () => this.setBit(this.zero.pos),
-		reset: () => this.clearBit(this.zero.pos),
-		triggers: []
-	};
-	this.irq = {
-		pos: 2,     // position
-		get: () => this.getBit(this.irq.pos),
-		set: () => this.setBit(this.irq.pos),
-		reset: () => this.clearBit(this.irq.pos),
-		triggers: [/SEI/, /CLI/]
-	};
-	this.decimal = {
-		pos: 3,     // position
-		get: () => this.getBit(this.decimal.pos),
-		set: () => this.setBit(this.decimal.pos),
-		reset: () => this.clearBit(this.decimal.pos),
-		triggers: [/SED/, /CLD/]
-	};
-	this.index8bit = {
-		pos: 4,     // position
-		get: () => this.getBit(this.index8bit.pos),
-		set: () => this.setBit(this.index8bit.pos),
-		reset: () => this.clearBit(this.index8bit.pos),
-		triggers: [/REP/, /SEP/]
-	};
-	this.accumulator8bit = {
-		pos: 5,     // position
-		get: () => this.getBit(this.accumulator8bit.pos),
-		set: () => this.setBit(this.accumulator8bit.pos),
-		reset: () => this.clearBit(this.accumulator8bit.pos),
-		triggers: [/SEC/, /CLC/]
-	};
-	this.overflow = {
-		pos: 6,     // position
-		get: () => this.getBit(this.overflow.pos),
-		set: () => this.setBit(this.overflow.pos),
-		reset: () => this.clearBit(this.overflow.pos),
-		triggers: [/SEP/, /CLV/]
-	};
-	this.negative = {
-		pos: 7,     // position
-		get: () => this.getBit(this.negative.pos),
-		set: () => this.setBit(this.negative.pos),
-		reset: () => this.clearBit(this.negative.pos),
-		triggers: []
-	};
-	this.emulation = {
-		pos: 8,     // position
-		get: () => this.getBit(this.emulation.pos),
-		set: () => this.setBit(this.emulation.pos),
-		reset: () => this.clearBit(this.emulation.pos),
-		triggers: ['XCE']
-	};
+		this.setFlags = VAL => {
+			if (DEBUG) console.log('setting bits:', isHex('0x' + VAL, console.log), this.current);
+			isHex('0x' + VAL, (res, hex) => {
+				this.current |= hex;
+			});
+			console.log(this.current)
+		};
+		this.resetFlags = VAL => {
+			if (DEBUG) console.log('resetting bits:', isHex('0x' + VAL, console.log), this.current);
+			isHex('0x' + VAL, (res, hex) => {
+				this.current &= ~hex;
+			});
+			console.log(this.current);
+		};
+
+		this.getString = function () {
+			console.log('getString()', this.current);
+			return _.split(this.base, '')
+				.reverse()
+				.map((ch, idx, arr) => {
+					console.log(ch, this.getBit(2 ** idx));
+					return this.getBit(2 ** idx) ? ch.toUpperCase() : ch.toLowerCase();
+				})
+				.reverse()
+				.join('');
+		};
+
+		this.carry = {
+			pos: 0,     // position
+			get: () => this.getBit(this.carry.pos),
+			set: () => this.setBit(this.carry.pos),
+			reset: () => this.clearBit(this.carry.pos),
+			triggers: [/SEC/, /CLC/]
+		};
+		this.zero = {
+			pos: 1,     // position
+			get: () => this.getBit(this.zero.pos),
+			set: () => this.setBit(this.zero.pos),
+			reset: () => this.clearBit(this.zero.pos),
+			triggers: []
+		};
+		this.irq = {
+			pos: 2,     // position
+			get: () => this.getBit(this.irq.pos),
+			set: () => this.setBit(this.irq.pos),
+			reset: () => this.clearBit(this.irq.pos),
+			triggers: [/SEI/, /CLI/]
+		};
+		this.decimal = {
+			pos: 3,     // position
+			get: () => this.getBit(this.decimal.pos),
+			set: () => this.setBit(this.decimal.pos),
+			reset: () => this.clearBit(this.decimal.pos),
+			triggers: [/SED/, /CLD/]
+		};
+		this.index = {
+			pos: 4,     // position
+			get: () => this.getBit(this.index.pos),
+			set: () => this.setBit(this.index.pos),
+			reset: () => this.clearBit(this.index.pos),
+			triggers: [/REP/, /SEP/]
+		};
+		this.memory = {
+			pos: 5,     // position
+			get: () => this.getBit(this.memory.pos),
+			set: () => this.setBit(this.memory.pos),
+			reset: () => this.clearBit(this.memory.pos),
+			triggers: [/SEC/, /CLC/]
+		};
+		this.overflow = {
+			pos: 6,     // position
+			get: () => this.getBit(this.overflow.pos),
+			set: () => this.setBit(this.overflow.pos),
+			reset: () => this.clearBit(this.overflow.pos),
+			triggers: [/SEP/, /CLV/]
+		};
+		this.negative = {
+			pos: 7,     // position
+			get: () => this.getBit(this.negative.pos),
+			set: () => this.setBit(this.negative.pos),
+			reset: () => this.clearBit(this.negative.pos),
+			triggers: []
+		};
+		this.emulation = {
+			pos: 8,     // position
+			get: () => this.getBit(this.emulation.pos),
+			set: () => this.setBit(this.emulation.pos),
+			reset: () => this.clearBit(this.emulation.pos),
+			triggers: ['XCE']
+		};
+	}
+
+	get CARRY() { return this.current & (1 << 0); }
+	get ZERO() { return this.current & (1 << 1); }
+	get IRQ() { return this.current & (1 << 2); }
+	get DECIMAL() { return this.current & (1 << 3); }
+	get INDEX() { return this.current & (1 << 4); }
+	get MEMORY() { return this.current & (1 << 5); }
+	get OVERFLOW() { return this.current & (1 << 6); }
+	get NEGATIVE() { return this.current & (1 << 7); }
+	get EMULATION() { return this.current & (1 << 8); }
+
 }
 
 /*
@@ -116,7 +146,7 @@ function initFlags() {
  */
 function parse(rom, metadata, pc, header=[], numBytes, callback) {
 	let numBytesToDis = parseInt(numBytes) || rom.length,
-		flags = new initFlags();
+		flags = new Flags();
 
 	if (DEBUG) console.log('begin ROM parse');
 
@@ -125,15 +155,13 @@ function parse(rom, metadata, pc, header=[], numBytes, callback) {
 		parseRecursive(rom, pc, pc, flags, numBytesToDis, (err, data) => {
 			if (err)
 				reject({err: 2, msg: 'ERROR PARSING LINE', data: data});
-			//.then(data => {
+
 			if (DEBUG) console.log('COMPLETE! RETURNING...');
 			if (LINES_DATA && LINES_DIS) {
 				LINES_DATA = [];
 				fulfill(LINES_DIS.join('<br />'));
 				LINES_DIS = [];
 			}
-			//})
-			//.catch(err => reject({err: 2, msg: 'ERROR PARSING LINE', data: err}));
 		});
 	});
 }
@@ -153,7 +181,6 @@ function parseRecursive(rom, pc=0, pcstart=0, flags, numBytesToDis, callback) {
 	readLine(rom, pc, flags)
 		.then(function (newline, newpc, newflags) {
 			console.log('FLAGS:',flags.getString());
-			if (DEBUG) console.log('finished:', newpc);
 			pc += newline.length;
 			if (DEBUG) console.log('starting:' + pc);
 
@@ -193,6 +220,9 @@ function readLine(rom, pc, flags) {
 	return new Promise((fulfill, reject) => {
 		if (DEBUG) console.log('rom size:', rom.length, 'pc:', pc, 'flags:', flags);
 
+		const MemoryOpcodes = ['LDA', 'SBC', 'ADC', 'BIT', 'AND', 'CMP',
+								'EOR', 'ORA'],
+			IndexOpcodes = ['LDX', 'LDY', 'CPX', 'CPY'];
 		let address = pc,
 		    args        = [],
 		    bytesRaw    = [],
@@ -215,16 +245,27 @@ function readLine(rom, pc, flags) {
 		opcode  = instructions[currByte].opcode;
 		format  = instructions[currByte].format;
 		length  = instructions[currByte].length;
-		//run     = instructions[currByte].run;
 
-		if (DEBUG) console.log('reading line args');
+		if (DEBUG > 1) console.log('INDEX',flags.INDEX,'MEMORY',flags.MEMORY,'FORMAT',format);
+		if (format.startsWith('#')) {
+			if (!flags.MEMORY) {
+				if (MemoryOpcodes.indexOf(opcode) > -1)
+					length++;
+			}
+			if (!flags.INDEX) {
+				if (IndexOpcodes.indexOf(opcode) > -1)
+					length++;
+			}
+		}
+
 		// read 2-3 additional byte args
+		if (DEBUG) console.log('reading line args');
 		for (let i=1; i < length; i++) {
 			args.push(toHex(rom[pc+i]));
 		}
 
-		if (DEBUG) console.log('reading line bytes');
 		// store all associated bytes
+		if (DEBUG) console.log('reading line bytes');
 		for (let i=0; i<length; i++) {
 			bytesRaw.push(toHex(rom[pc+i]));
 		}
@@ -235,8 +276,7 @@ function readLine(rom, pc, flags) {
 
 		if (DEBUG) console.log('executing run function');
 		//eval("opcodeFunctions." + opcode + "(args)");
-		flags = opcodeFunctions[opcode](args, flags);
-
+		flags = opcodeFunctions[opcode](toHex(args.reverse().join('')), flags);
 		line = {
 			address: address,
 			opcode: opcode,
