@@ -32,16 +32,17 @@ app.post('/', upload.single('romfile'), (req, res) => {
 	}
 
 	// parse user-defined values
-	let header = [],				                	// placeholder array for SMC header
-	    metadata = req.file, 			            	// rom file
-		pc = 0,                                         //
-	    startpc = req.body['startpc'] || '0x000000', 	// starting pc address (default: 0x000000)
-	    disWholeRom = req.body['disWholeRom'], 		    // boolean specifying whether to dis 'numBytesToDis' bytes, or the whole rom
-	    numBytesToParse = req.body['bytes'] || 1024, 	// number of bytes to disassemble (default 1024)
-		memory8Bit = req.body['memory8Bit'],
-		index8Bit = req.body['index8Bit'],
-		parseAsData = req.body['data'],
-		rom = metadata.buffer; 				            // buffer containing sequential rom bytes
+	let header          = [],				                	// placeholder array for SMC header
+	    metadata        = req.file, 			            	// rom file
+		pc              = 0,                                    //
+	    startpc         = req.body['startpc'] || '0x000000', 	// starting pc address (default: 0x000000)
+	    disWholeRom     = req.body['disWholeRom'], 		        // boolean specifying whether to dis 'numBytesToDis' bytes, or the whole rom
+	    numBytesToParse = req.body['bytes'] || 1024, 	        // number of bytes to disassemble (default 1024)
+		memory8Bit      = req.body['memory8Bit'],
+		index8Bit       = req.body['index8Bit'],
+		parseAsData     = req.body['data'],
+		entriesPerLine  = req.body['entriesPerLine'],
+		rom             = metadata.buffer; 				        // buffer containing sequential rom bytes
 
 	console.log('memory8Bit',memory8Bit,'index8Bit',index8Bit);
 	if (DEBUG) console.log('initial startpc:', startpc);
@@ -95,7 +96,7 @@ app.post('/', upload.single('romfile'), (req, res) => {
 
 			if (parseAsData) {
 				if (DEBUG) console.log('parsing data as:', parseAsData);
-				Tools.parseData(rom, pc, numBytesToParse, parseAsData)
+				Tools.parseData(rom, pc, numBytesToParse, parseAsData, entriesPerLine)
 					.then(data => {
 						console.log('finished parsing data');
 						res.status(200).send(data);

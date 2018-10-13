@@ -318,7 +318,7 @@ function readLine(rom, pc, flags) {
 	});
 }
 
-function parseData(rom, pc, numBytes, byteSizer='db') {
+function parseData(rom, pc, numBytes, byteSizer='db', lineSize=8) {
 	return new Promise((fulfill, reject) => {
 		if (!numBytes) reject('ERROR NO BYTES TO DISASSEMBLE');
 		let bytes = [],
@@ -347,13 +347,17 @@ function parseData(rom, pc, numBytes, byteSizer='db') {
 
 		if (DEBUG) console.log('byte length:', length);
 
-		for (let i = 0; i < numBytes; i += length) {
+		for (let i = 0; i < numBytes;) {
+			console.log(numBytes - i);
 
 			if ((numBytes - i) < length) {  // handle extraneous bytes
 				if (DEBUG) console.log('handling extra bytes', rom[pc]);
-				length = 1;
+				//length = 1;
 				bytesExtra.push('$' + toHex(rom[pc]));
 				pc++;
+
+				if (i + 1 === numBytes) break;
+				i += 1;
 				continue;
 			}
 
@@ -366,13 +370,14 @@ function parseData(rom, pc, numBytes, byteSizer='db') {
 
 			bytesRaw = [];
 			pc += length;
+			i += length;
 		}
 		if (DEBUG) console.log('chunking bytes:',bytes);
-		bytes = _.chunk(bytes, 8);
+		bytes = _.chunk(bytes, lineSize);
 		_.each(bytes, row => {
 			rows.push(byteSizer + ' ' + row.join(', ') + '<br />');
 		});
-		bytesExtra.length > 0? rows.push('db ' + bytesExtra.join(', ')): {};
+		bytesExtra.length? rows.push('db ' + bytesExtra.join(', ')): {};
 		fulfill(`${rows.join('')}`);
 	});
 }
