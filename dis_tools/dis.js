@@ -16,9 +16,11 @@ if (DEBUG) console.log('DEBUG ENABLED');
 
 //todo move this & clean up
 class Flags {
-	constructor() {
+	constructor(memory8Bit, index8Bit) {
 		this.base = 'EnvMXdizc';
 		this.current = 0b100110000;
+		this.MEMORY = memory8Bit;
+		this.INDEX = index8Bit;
 		this.set = VAL => this.current = VAL;
 
 		this.getBit = POS => this.current & POS; //(1 << POS);
@@ -131,6 +133,16 @@ class Flags {
 	get NEGATIVE() { return this.current & (1 << 7); }
 	get EMULATION() { return this.current & (1 << 8); }
 
+	set CARRY(x) { x? this.current |= (1 << 0): this.current &= ~(1 << 0); }
+	set ZERO(x) { x? this.current |= (1 << 1): this.current &= ~(1 << 1); }
+	set IRQ(x) { x? this.current |= (1 << 2): this.current &= ~(1 << 2); }
+	set DECIMAL(x) { x? this.current |= (1 << 3): this.current &= ~(1 << 3); }
+	set INDEX(x) { x? this.current |= (1 << 4): this.current &= ~(1 << 4); }
+	set MEMORY(x) { x? this.current |= (1 << 5): this.current &= ~(1 << 5); }
+	set OVERFLOW(x) { x? this.current |= (1 << 6): this.current &= ~(1 << 6); }
+	set NEGATIVE(x) { x? this.current |= (1 << 7): this.current &= ~(1 << 7); }
+	set EMULATION(x) { x? this.current |= (1 << 8): this.current &= ~(1 << 8); }
+
 }
 
 /*
@@ -144,9 +156,9 @@ class Flags {
  * Returns:
  * @lines - joined string of all disassembled bytes, separated by newlines
  */
-function parse(rom, metadata, pc, header=[], numBytes, callback) {
-	let numBytesToDis = parseInt(numBytes) || rom.length,
-		flags = new Flags();
+function parse(rom, metadata, pc, header=[], numBytes, flags, callback) {
+	let numBytesToDis = parseInt(numBytes) || rom.length;
+		//flags = new Flags();
 
 	if (DEBUG) console.log('begin ROM parse');
 
@@ -306,6 +318,65 @@ function readLine(rom, pc, flags) {
 	});
 }
 
+function parseData(rom, pc, numBytes, byteSizer='db') {
+	return new Promise((fulfill, reject) => {
+		if (!numBytes) reject('ERROR NO BYTES TO DISASSEMBLE');
+		let bytes = [],
+			bytesRaw = [],
+			bytesExtra = [],
+			bytesExtraRaw = [],
+			rows = [],
+			length = 1;
+
+		switch (byteSizer) {
+			case 'db':
+				length = 1;
+				break;
+			case 'dw':
+				length = 2;
+				break;
+			case 'dl':
+				length = 3;
+				break;
+			case 'dd':
+				length = 4;
+				break;
+			default:
+				length = 1;
+		}
+
+		if (DEBUG) console.log('byte length:', length);
+
+		for (let i = 0; i < numBytes; i += length) {
+
+			if ((numBytes - i) < length) {  // handle extraneous bytes
+				if (DEBUG) console.log('handling extra bytes', rom[pc]);
+				length = 1;
+				bytesExtra.push('$' + toHex(rom[pc]));
+				pc++;
+				continue;
+			}
+
+			for (let j = 0; j < length; j++) {
+				bytesRaw.push(toHex(rom[pc + j]));
+				if (DEBUG) console.log('pushed bytesraw:', rom[pc+j], j);
+			}
+			bytes.push('$' + bytesRaw.reverse().join(''));
+			if (DEBUG) console.log('pushed bytes:', bytesRaw.reverse().join(''), i);
+
+			bytesRaw = [];
+			pc += length;
+		}
+		if (DEBUG) console.log('chunking bytes:',bytes);
+		bytes = _.chunk(bytes, 8);
+		_.each(bytes, row => {
+			rows.push(byteSizer + ' ' + row.join(', ') + '<br />');
+		});
+		bytesExtra.length > 0? rows.push('db ' + bytesExtra.join(', ')): {};
+		fulfill(`${rows.join('')}`);
+	});
+}
+
 
 /*
  * Checks if the ROM has an SMC header
@@ -355,5 +426,7 @@ module.exports = {
 	checkHeader: checkHeader,
 	isHex: isHex,
 	toHex: toHex,
-        romParse: parse
+	romParse: parse,
+	parseData: parseData,
+	Flags: Flags
 };

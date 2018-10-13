@@ -1,13 +1,26 @@
 <html>
         <head>
-                SNES ROM Disassembler (ALPHA)<br /><br />
+                SNES ROM Disassembler (BETA)<br /><br />
         </head>
 
         <body>
                 <form action='/' method='post' enctype='multipart/form-data'>
                         Upload SFC/SMC SNES ROM:<br />
                         <input type='file' name='romfile' /><br /><br />
-			            Starting address (SNES PC): <input type='text' name='startpc' value='0x000000' /><br />
+			            Starting address (SNES PC):<br /><input type='text' name='startpc' value='0x000000' /><br />
+                        <input type='checkbox' name='memory8Bit' checked>8-bit A<br />
+                        <input type='checkbox' name='index8Bit' checked>8-bit X/Y<br /><br />
+
+                        Data?<br />
+                        <input type='radio' name='data' value='db'>
+                        <label for='db'>db</label><br />
+                        <input type='radio' name='data' value='dw'>
+                        <label for='dw'>dw</label><br />
+                        <input type='radio' name='data' value='dl'>
+                        <label for='dl'>dl</label><br />
+                        <input type='radio' name='data' value='dd'>
+                        <label for='dd'>dd</label><br /><br />
+
                         Number of bytes to read: <input type='text' name='bytes' /><br /><br />
                         <input type='submit' value="Disassemble" /><br />
 			            Disassemble entire ROM? <input type='checkbox' name='disWholeRom' /><br />

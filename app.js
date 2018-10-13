@@ -38,8 +38,12 @@ app.post('/', upload.single('romfile'), (req, res) => {
 	    startpc = req.body['startpc'] || '0x000000', 	// starting pc address (default: 0x000000)
 	    disWholeRom = req.body['disWholeRom'], 		    // boolean specifying whether to dis 'numBytesToDis' bytes, or the whole rom
 	    numBytesToParse = req.body['bytes'] || 1024, 	// number of bytes to disassemble (default 1024)
-	    rom = metadata.buffer; 				            // buffer containing sequential rom bytes
+		memory8Bit = req.body['memory8Bit'],
+		index8Bit = req.body['index8Bit'],
+		parseAsData = req.body['data'],
+		rom = metadata.buffer; 				            // buffer containing sequential rom bytes
 
+	console.log('memory8Bit',memory8Bit,'index8Bit',index8Bit);
 	if (DEBUG) console.log('initial startpc:', startpc);
 
 	// Sanitize numBytesToParse
@@ -89,6 +93,22 @@ app.post('/', upload.single('romfile'), (req, res) => {
 				}
 			}
 
+			if (parseAsData) {
+				if (DEBUG) console.log('parsing data as:', parseAsData);
+				Tools.parseData(rom, pc, numBytesToParse, parseAsData)
+					.then(data => {
+						console.log('finished parsing data');
+						res.status(200).send(data);
+					})
+					.catch(err => {
+						if (DEBUG) console.error('ERROR PARSING DATA AS:', parseAsData, err);
+						res.status(500).send(err);
+					})
+				return;
+			}
+
+			let flags = new Tools.Flags(memory8Bit, index8Bit);
+
 			if (DEBUG) console.log('final pc before parsing:', pc);
 			if (DEBUG) console.log('final numBytesToParse:', numBytesToParse);
 
@@ -100,9 +120,11 @@ app.post('/', upload.single('romfile'), (req, res) => {
 			 * @header - array of 512 header bytes, if applicable
 			 * @numBytesToParse - number of bytes to disassemble
 			 */
-			Tools.romParse(rom, metadata, pc, header, numBytesToParse)
+			Tools.romParse(rom, metadata, pc, header, numBytesToParse, flags)
 				.then((data, extra=null) => {
-					if (DEBUG) console.log('finished parsing ROM, sending 200');
+					if (DEBUG) console.log('finished parsing ROM, sending 20' +
+						'' +
+						'0');
 					// Send results of ROM parsing to the user
 					res.status(200).send(data);
 				})
@@ -129,6 +151,8 @@ if (module === require.main) {
 // Limits file extensions to the following:
 // .smc - headered SNES
 // .sfc - unheadered SNES
+
+
 function fileFilter(arg, file, cb) {
 	switch(file.originalname.slice(-3)) {
 		case 'smc':

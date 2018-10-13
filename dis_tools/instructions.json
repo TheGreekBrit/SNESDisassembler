@@ -179,7 +179,7 @@
     "0x7a": {"opcode": "PLY", "length": 1, "format": "" },
     "0xc2": {"opcode": "REP", "length": 2, "format": "#$<%= bytes %>" },
     "0x26": {"opcode": "ROL", "length": 2, "format": "$<%= bytes %>" },
-    "0x2a": {"opcode": "ROL", "length": 1, "format": "$<%= bytes %>,x" },
+    "0x2a": {"opcode": "ROL", "length": 1, "format": "" },
     "0x2e": {"opcode": "ROL", "length": 3, "format": "$<%= bytes %>,x" },
     "0x36": {"opcode": "ROL", "length": 2, "format": "$<%= bytes %>,x" },
     "0x3e": {"opcode": "ROL", "length": 3, "format": "$<%= bytes %>,x" },
